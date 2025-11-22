@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>北海道和風旅遊手冊</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Google Fonts (Noto Serif for Wafu feel) -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            /* 桌機版背景色 (深灰，突顯手冊) */
+            background-color: #e7e5e4; 
+            overscroll-behavior-y: none;
+        }
+        .font-serif {
+            font-family: 'Noto Serif TC', serif;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* --- 核心修復：背景紋理 --- */
+        /* 將紋理直接應用在 App 容器上，而不是分開的 div */
+        .wafu-bg {
+            background-color: #fcfcfc; /* 和紙白 */
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23000000' fill-opacity='0.05' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='3'/%3E%3Ccircle cx='13' cy='13' r='3'/%3E%3C/g%3E%3C/svg%3E");
+            background-size: 20px 20px;
+        }
+
+        /* 動畫設定 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+        .backdrop-blur-sm {
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+        }
+    </style>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        indigo: { 900: '#312e81', 50: '#eef2ff' },
+                        red: { 700: '#b91c1c' },
+                        stone: { 800: '#292524', 100: '#f5f5f4' }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body>
+
+    <!-- App 容器：加入 wafu-bg 類別 -->
+    <div id="app" class="wafu-bg max-w-md mx-auto min-h-screen shadow-2xl relative overflow-hidden">
+        <!-- 內容將由 JavaScript 動態渲染 -->
+    </div>
+
+    <!-- 模態框容器 -->
+    <div id="modal-container" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-sm">
+        <!-- Modal 內容由 JS 填充 -->
+    </div>
+
+    <script>
+        // --- 初始數據 ---
+        const INITIAL_SCHEDULE_DATA = {
+            1: {
+                date: "1月4日",
+                weekday: "土曜日",
+                location: "香港 ✈ 札幌",
+                weatherLat: 43.0618,
+                weatherLon: 141.3545,
+                img: "https://images.unsplash.com/photo-1534445967799-75c758a66686?auto=format&fit=crop&q=80&w=800",
+                events: [
+                    { time: "05:30", endTime: "06:00", title: "起床準備", location: "家", type: "misc", iconType: "misc", note: "確認護照、保暖衣物" },
+                    { time: "06:30", endTime: "07:00", title: "機場快線", location: "香港站", type: "transport", iconType: "transport", note: "市區預辦登機" },
+                    { time: "09:25", endTime: "15:00", title: "飛往北海道", location: "新千歲機場 (CTS)", type: "flight", iconType: "flight", flightNo: "CX580", note: "預計 15:05 抵達" },
+                    { time: "15:30", endTime: "16:00", title: "入境手續", location: "新千歲機場", type: "misc", iconType: "misc" },
+                    { time: "16:00", endTime: "17:00", title: "前往札幌", location: "JR 札幌站", type: "transport", iconType: "transport", note: "快速機場線" },
+                    { time: "18:00", endTime: "19:00", title: "迴轉壽司 Toriton", location: "回転寿司トリトン", type: "food", iconType: "food", note: "人氣名店" },
+                    { time: "19:30", endTime: "20:00", title: "電視塔觀光", location: "札幌電視塔", type: "sightseeing", iconType: "camera", mapLink: "" },
+                    { time: "22:30", endTime: "23:00", title: "入住飯店", location: "Sapporo Hotel", type: "hotel", iconType: "hotel", bookingId: "HTL-88293" }
+                ]
+            },
+            2: {
+                date: "1月5日",
+                weekday: "日曜日",
+                location: "札幌市區",
+                weatherLat: 43.0618,
+                weatherLon: 141.3545,
+                img: "https://images.unsplash.com/photo-1540987086098-97d09437c6dd?auto=format&fit=crop&q=80&w=800",
+                events: [
+                    { time: "09:00", endTime: "09:30", title: "晨間朝食", location: "飯店", type: "food", iconType: "coffee" },
+                    { time: "10:00", endTime: "11:00", title: "神宮參拜", location: "北海道神宮", type: "sightseeing", iconType: "camera", note: "感受靜謐氛圍" },
+                    { time: "11:30", endTime: "12:30", title: "海鮮早午餐", location: "二條市場", type: "food", iconType: "food", note: "海鮮丼、帝王蟹" },
+                    { time: "13:30", endTime: "15:00", title: "市區漫步", location: "大通公園 & 舊本廳舍", type: "sightseeing", iconType: "camera", note: "紅磚廳舍" },
+                    { time: "17:00", endTime: "18:30", title: "商店街散策", location: "狸小路商店街", type: "shopping", iconType: "shopping", note: "藥妝、伴手禮" },
+                    { time: "19:00", endTime: "20:30", title: "成吉思汗烤肉", location: "士別バーベキュー", type: "food", iconType: "food", note: "必吃烤羊肉" }
+                ]
+            },
+            3: {
+                date: "1月6日",
+                weekday: "月曜日",
+                location: "小樽浪漫遊",
+                weatherLat: 43.1907,
+                weatherLon: 140.9947,
+                img: "https://images.unsplash.com/photo-1542051841857-5f90071e7989?auto=format&fit=crop&q=80&w=800",
+                events: [
+                    { time: "10:30", endTime: "11:30", title: "JR 海線列車", location: "往小樽", type: "transport", iconType: "train", note: "沿途欣賞海景" },
+                    { time: "11:30", endTime: "13:00", title: "三角市場", location: "小樽站旁", type: "food", iconType: "food", note: "瀧波食堂" },
+                    { time: "13:00", endTime: "14:00", title: "運河散策", location: "小樽運河", type: "sightseeing", iconType: "camera", note: "經典拍照點" },
+                    { time: "14:00", endTime: "15:30", title: "堺町通", location: "北一硝子 & 音樂盒堂", type: "shopping", iconType: "music", note: "玻璃工藝、LeTAO" },
+                    { time: "16:00", endTime: "18:00", title: "天狗山夜景", location: "天狗山纜車", type: "sightseeing", iconType: "snowflake", note: "三大夜景" },
+                    { time: "21:30", endTime: "22:30", title: "夜間娛樂", location: "ROUND 1 札幌", type: "misc", iconType: "game" }
+                ]
+            },
+            4: {
+                date: "1月7日",
+                weekday: "火曜日",
+                location: "札幌雪趣",
+                weatherLat: 43.0618,
+                weatherLon: 141.3545,
+                img: "https://images.unsplash.com/photo-1516466723877-e4ec1d736c8a?auto=format&fit=crop&q=80&w=800",
+                events: [
+                    { time: "10:00", endTime: "11:00", title: "悠閒早晨", location: "飯店", type: "misc", iconType: "bed", note: "Hea 模式" },
+                    { time: "11:00", endTime: "13:00", title: "湯咖哩名店", location: "Soup Curry GARAKU", type: "food", iconType: "food", note: "提早排隊" },
+                    { time: "14:00", endTime: "17:00", title: "藻岩山雪景", location: "藻岩山滑雪場", type: "sightseeing", iconType: "snowflake", note: "白色世界" },
+                    { time: "19:00", endTime: "21:00", title: "自由晚餐", location: "札幌市區", type: "food", iconType: "food" }
+                ]
+            },
+            5: {
+                date: "1月8日",
+                weekday: "水曜日",
+                location: "札幌 ✈ 香港",
+                weatherLat: 43.0618,
+                weatherLon: 141.3545,
+                img: "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&q=80&w=800",
+                events: [
+                    { time: "11:00", endTime: "11:30", title: "退房", location: "飯店", type: "hotel", iconType: "bed" },
+                    { time: "11:30", endTime: "12:30", title: "前往機場", location: "JR 新千歲空港", type: "transport", iconType: "train" },
+                    { time: "12:30", endTime: "14:00", title: "最後採買", location: "國內線航廈", type: "shopping", iconType: "shopping", note: "拉麵道場、伴手禮" },
+                    { time: "14:00", endTime: "15:00", title: "候機", location: "登機門", type: "flight", iconType: "plane" },
+                    { time: "16:00", endTime: "21:00", title: "返家", location: "香港國際機場", type: "flight", iconType: "bed" }
+                ]
+            }
+        };
+
+        // --- 狀態管理 ---
+        const state = {
+            activeDay: 1,
+            schedule: JSON.parse(JSON.stringify(INITIAL_SCHEDULE_DATA)),
+            selectedEventIndex: null,
+            isEditing: false,
+            weatherTemp: null
+        };
+
+        // --- 輔助函數 ---
+        const getIconName = (type) => {
+            const map = {
+                misc: 'cloud-sun', transport: 'train', flight: 'plane', food: 'utensils',
+                camera: 'camera', hotel: 'bed-double', coffee: 'coffee', shopping: 'shopping-bag',
+                music: 'music', snowflake: 'snowflake', game: 'gamepad-2', train: 'train',
+                bed: 'bed-double', plane: 'plane'
+            };
+            return map[type] || 'circle';
+        };
+
+        const getEventColorClass = (type, isBg = false) => {
+             const colors = {
+                flight: isBg ? "bg-indigo-900" : "text-indigo-900 bg-indigo-50 border-indigo-100",
+                transport: isBg ? "bg-slate-700" : "text-slate-700 bg-slate-50 border-slate-200",
+                food: isBg ? "bg-orange-700" : "text-orange-800 bg-orange-50 border-orange-100", 
+                hotel: isBg ? "bg-stone-600" : "text-stone-600 bg-stone-100 border-stone-200",
+                sightseeing: isBg ? "bg-teal-700" : "text-teal-800 bg-teal-50 border-teal-100", 
+                shopping: isBg ? "bg-rose-700" : "text-rose-800 bg-rose-50 border-rose-100",
+                misc: isBg ? "bg-stone-400" : "text-stone-500 bg-stone-50 border-stone-200",
+            };
+            return colors[type] || colors.misc;
+        };
+
+        // --- 渲染邏輯 ---
+        
+        function renderApp() {
+            const app = document.getElementById('app');
+            const dayData = state.schedule[state.activeDay];
+            
+            app.innerHTML = `
+                ${renderHero(dayData)}
+                ${renderTimeline(dayData)}
+                ${renderBottomNav()}
+            `;
+            
+            lucide.createIcons();
+            fetchWeather(dayData.weatherLat, dayData.weatherLon);
+        }
+
+        function renderHero(data) {
+            return `
+                <div class="relative h-80 overflow-hidden bg-stone-100 rounded-b-[30px] shadow-xl shadow-stone-200/50">
+                    <div class="absolute inset-0">
+                        <img src="${data.img}" class="w-full h-full object-cover opacity-90" alt="Hokkaido">
+                        <div class="absolute inset-0 bg-gradient-to-t from-[#fcfcfc] via-transparent to-black/10"></div>
+                    </div>
+                    
+                    <div class="absolute inset-0 flex flex-col justify-between p-6 text-stone-800">
+                        <div class="flex justify-between items-start mt-2">
+                            <div class="bg-white/90 backdrop-blur-md px-4 py-3 rounded-sm shadow-sm border-l-4 border-red-700 flex flex-col items-center">
+                                <span class="text-xs font-bold text-stone-400 uppercase tracking-widest">Day</span>
+                                <span class="text-3xl font-serif font-bold text-stone-900 leading-none mt-1">${state.activeDay}</span>
+                            </div>
+                            <div id="weather-widget" class="flex items-center space-x-2 bg-white/80 backdrop-blur-sm border border-stone-200 shadow-sm px-3 py-1 rounded-full text-stone-600 text-sm font-serif">
+                                <i data-lucide="cloud-sun" class="w-4 h-4 text-sky-600"></i>
+                                <span>${state.weatherTemp ? state.weatherTemp + '°C' : '...'}</span>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                             <div class="inline-flex items-center px-3 py-1 bg-red-700 text-white text-xs font-bold tracking-widest mb-3 shadow-sm">
+                               <i data-lucide="map-pin" class="w-3 h-3 mr-1"></i> HOKKAIDO
+                             </div>
+                             <h1 class="text-4xl font-serif font-bold text-stone-800 drop-shadow-sm mb-1 tracking-wide">${data.weekday}</h1>
+                             <div class="h-1 w-16 bg-indigo-900 mb-2"></div>
+                             <p class="text-stone-600 font-medium flex items-center text-sm">${data.location}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderTimeline(data) {
+            let eventsHtml = data.events.map((item, index) => `
+                <div class="relative flex items-start mb-10 group animate-fade-in" style="animation-delay: ${index * 0.05}s">
+                    <!-- Time -->
+                    <div class="w-[55px] pt-2 pr-3 text-right flex-shrink-0">
+                        <span class="block text-base font-serif font-bold text-stone-700 leading-none">${item.time}</span>
+                        <span class="block text-[10px] text-stone-400 mt-1">${item.endTime}</span>
+                    </div>
+
+                    <!-- Node -->
+                    <div class="z-10 flex items-center justify-center w-5 h-5 bg-[#fcfcfc] rounded-full border border-stone-200 shadow-sm ml-1 mr-4 mt-1.5 transition-all duration-300 group-hover:scale-125 ${getEventColorClass(item.type)}">
+                        ${ (item.type === 'sightseeing' || item.type === 'flight') 
+                            ? `<i data-lucide="snowflake" class="w-2.5 h-2.5 ${item.type === 'flight' ? 'text-indigo-400' : 'text-teal-400'}"></i>`
+                            : `<div class="w-1.5 h-1.5 rounded-full bg-current"></div>` 
+                        }
+                    </div>
+
+                    <!-- Card -->
+                    <div onclick="openModal(${index})" class="flex-1 bg-white p-4 rounded-sm border border-stone-100 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] transition-all duration-200 active:scale-[0.98] cursor-pointer hover:shadow-md hover:border-stone-200 relative overflow-hidden group-hover:border-stone-300">
+                        <div class="absolute top-0 right-0 p-2 opacity-5">
+                           <i data-lucide="${getIconName(item.iconType)}" class="w-[60px] h-[60px]"></i>
+                        </div>
+
+                        <div class="relative z-10">
+                           <div class="flex justify-between items-start mb-1">
+                             <h3 class="font-bold text-stone-800 text-lg line-clamp-1 font-serif tracking-wide">${item.title || '未命名行程'}</h3>
+                           </div>
+                           
+                           <div class="flex items-center text-xs text-stone-500 mb-3 font-medium">
+                             <i data-lucide="map-pin" class="w-2.5 h-2.5 mr-1 text-red-400"></i> ${item.location || '待定地點'}
+                           </div>
+
+                           <div class="flex flex-wrap gap-2">
+                             <span class="text-[10px] px-2 py-0.5 rounded-sm border ${getEventColorClass(item.type)} bg-opacity-30">
+                               ${item.type.toUpperCase()}
+                             </span>
+                             ${item.note ? `<span class="text-[10px] px-2 py-0.5 bg-stone-100 text-stone-500 rounded-sm border border-stone-200 truncate max-w-[120px]">${item.note}</span>` : ''}
+                           </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            return `
+                <div class="max-w-md mx-auto px-5 py-10 relative">
+                    <div class="absolute top-0 right-4 text-stone-200 opacity-50 pointer-events-none">
+                        <i data-lucide="mountain" class="w-[120px] h-[120px]" stroke-width="1"></i>
+                    </div>
+                    
+                    <div class="relative z-10">
+                        <div class="absolute left-[64px] top-6 bottom-0 w-[1px] bg-stone-300 border-l border-dashed border-stone-300"></div>
+                        ${eventsHtml}
+                        
+                        <div class="flex justify-center mt-2 pl-[70px]">
+                            <button onclick="addNewEvent()" class="flex items-center space-x-2 px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-500 rounded-full border border-dashed border-stone-300 transition-all active:scale-95">
+                                <i data-lucide="plus" class="w-4 h-4"></i>
+                                <span class="text-xs font-medium">添加行程</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center mt-12 mb-4 text-stone-300 items-center space-x-2">
+                         <div class="h-[1px] w-8 bg-stone-300"></div>
+                         <i data-lucide="snowflake" class="w-3.5 h-3.5"></i>
+                         <div class="h-[1px] w-8 bg-stone-300"></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderBottomNav() {
+            const buttons = [1, 2, 3, 4, 5].map(day => `
+                <button onclick="changeDay(${day})" class="relative flex flex-col items-center justify-center w-12 h-12 rounded-full transition-all duration-300 group ${state.activeDay === day ? 'text-white' : 'text-stone-400 hover:text-stone-600'}">
+                    ${state.activeDay === day ? '<div class="absolute inset-0 bg-red-700 rounded-full shadow-md scale-100 animate-fade-in"></div>' : ''}
+                    <span class="relative z-10 text-sm font-serif font-bold">${day}</span>
+                    <span class="relative z-10 text-[9px] opacity-90 uppercase tracking-tighter transform -translate-y-0.5">Day</span>
+                </button>
+            `).join('');
+
+            return `
+                <div class="fixed bottom-6 left-4 right-4 bg-white/95 backdrop-blur-xl rounded-full shadow-xl shadow-stone-300/40 border border-white z-40 max-w-md mx-auto">
+                    <div class="flex justify-between items-center px-2 py-2">
+                        ${buttons}
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- Modal 邏輯 ---
+
+        function openModal(index) {
+            state.selectedEventIndex = index;
+            state.isEditing = false;
+            renderModal();
+            document.getElementById('modal-container').classList.remove('hidden');
+            const event = state.schedule[state.activeDay].events[index];
+            if (!event.title) toggleEditMode(true);
+        }
+
+        function closeModal() {
+            document.getElementById('modal-container').classList.add('hidden');
+            state.selectedEventIndex = null;
+        }
+
+        function toggleEditMode(forceState) {
+            state.isEditing = forceState !== undefined ? forceState : !state.isEditing;
+            renderModal();
+        }
+
+        function renderModal() {
+            const container = document.getElementById('modal-container');
+            const event = state.schedule[state.activeDay].events[state.selectedEventIndex];
+            
+            if (!event) return;
+
+            const mapLink = (event.mapLink && event.mapLink.trim() !== "") 
+                ? event.mapLink 
+                : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`;
+            const mapBtnText = event.mapLink ? "OPEN MAP LINK" : "SEARCH MAP";
+
+            let contentHtml = '';
+
+            if (!state.isEditing) {
+                // View Mode
+                contentHtml = `
+                    <div class="mb-6 text-center">
+                        <h3 class="text-2xl font-serif font-bold text-stone-800 mb-2 tracking-wide">${event.title}</h3>
+                        <div class="inline-flex items-center justify-center px-3 py-1 bg-stone-100 rounded-full text-stone-500 text-xs font-medium tracking-wider uppercase border border-stone-200">
+                            <i data-lucide="map-pin" class="w-3 h-3 mr-1 text-red-700"></i>
+                            ${event.location}
+                        </div>
+                    </div>
+                    <div class="space-y-4 font-sans">
+                        <div class="flex items-center p-4 bg-stone-50 rounded-lg border border-stone-100">
+                            <div class="w-1/3 border-r border-stone-200 pr-4 text-right">
+                                <p class="text-[10px] text-stone-400 uppercase tracking-widest">Time</p>
+                                <p class="text-stone-800 font-bold font-serif text-lg">${event.time}</p>
+                            </div>
+                            <div class="w-2/3 pl-4">
+                                ${event.flightNo ? `<p class="text-sm text-indigo-800 font-medium">✈ ${event.flightNo}</p>` : ''}
+                                ${event.bookingId ? `<p class="text-sm text-indigo-800 font-medium">№ ${event.bookingId}</p>` : ''}
+                                ${(!event.flightNo && !event.bookingId) ? '<p class="text-sm text-stone-400 italic">Enjoy your time</p>' : ''}
+                            </div>
+                        </div>
+                        ${event.note ? `
+                        <div class="bg-amber-50/50 p-4 rounded-lg border border-amber-100/50 relative overflow-hidden">
+                            <div class="absolute top-0 left-0 w-1 h-full bg-amber-300"></div>
+                            <p class="text-sm text-amber-900/80 leading-relaxed text-justify">
+                                <span class="font-bold mr-1">memo:</span> ${event.note}
+                            </p>
+                        </div>` : ''}
+                        
+                        <div class="flex gap-3 pt-2">
+                            <a href="${mapLink}" target="_blank" class="flex-1 flex items-center justify-center bg-indigo-900 hover:bg-indigo-800 text-white font-medium py-3 rounded-lg transition-all shadow-lg shadow-indigo-900/20">
+                                <i data-lucide="navigation" class="w-4 h-4 mr-2"></i>
+                                <span class="tracking-widest text-xs">${mapBtnText}</span>
+                            </a>
+                            <button onclick="toggleEditMode()" class="flex items-center justify-center px-4 bg-white border border-stone-300 text-stone-600 rounded-lg hover:bg-stone-50 transition-colors">
+                                <i data-lucide="edit-3" class="w-4.5 h-4.5"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Edit Mode
+                contentHtml = `
+                    <div class="space-y-5 animate-fade-in">
+                        <div class="text-center mb-4">
+                            <h3 class="text-lg font-serif font-bold text-stone-400 tracking-widest">行程編輯</h3>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs text-stone-400 uppercase tracking-wider font-bold ml-1">活動標題</label>
+                            <input id="input-title" value="${event.title}" class="w-full bg-transparent border-b-2 border-stone-200 focus:border-red-700 px-2 py-2 outline-none text-lg font-serif text-stone-800 placeholder-stone-300" placeholder="輸入活動名稱...">
+                        </div>
+                        <div class="flex gap-4">
+                            <div class="flex-1 space-y-1">
+                                <label class="text-xs text-stone-400 uppercase tracking-wider font-bold ml-1">開始時間</label>
+                                <input type="time" id="input-time" value="${event.time}" class="w-full bg-stone-50 rounded-md border border-stone-200 px-3 py-2 outline-none text-stone-700">
+                            </div>
+                            <div class="flex-1 space-y-1">
+                                <label class="text-xs text-stone-400 uppercase tracking-wider font-bold ml-1">結束時間</label>
+                                <input type="time" id="input-endTime" value="${event.endTime}" class="w-full bg-stone-50 rounded-md border border-stone-200 px-3 py-2 outline-none text-stone-700">
+                            </div>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs text-stone-400 uppercase tracking-wider font-bold ml-1">地點名稱</label>
+                            <input id="input-location" value="${event.location}" class="w-full bg-transparent border-b border-stone-200 focus:border-indigo-900 px-2 py-2 outline-none text-stone-700" placeholder="輸入地點...">
+                        </div>
+                        <div class="space-y-1">
+                            <div class="flex items-center">
+                                <i data-lucide="link" class="w-3 h-3 text-stone-400 mr-1"></i>
+                                <label class="text-xs text-stone-400 uppercase tracking-wider font-bold">Google Maps 連結 (選填)</label>
+                            </div>
+                            <input id="input-mapLink" value="${event.mapLink || ''}" class="w-full bg-transparent border-b border-stone-200 focus:border-indigo-900 px-2 py-2 outline-none text-stone-600 text-sm placeholder-stone-300" placeholder="貼上 https://goo.gl/... 連結">
+                        </div>
+                         <div class="space-y-1">
+                            <label class="text-xs text-stone-400 uppercase tracking-wider font-bold ml-1">類型</label>
+                            <select id="input-type" class="w-full bg-stone-50 rounded-md border border-stone-200 px-3 py-2 outline-none text-stone-700">
+                                ${['sightseeing','food','shopping','transport','hotel','flight','misc'].map(t => 
+                                    `<option value="${t}" ${event.type === t ? 'selected' : ''}>${t.toUpperCase()}</option>`
+                                ).join('')}
+                            </select>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs text-stone-400 uppercase tracking-wider font-bold ml-1">備註</label>
+                            <textarea id="input-note" rows="2" class="w-full bg-[#fffdf5] border border-amber-100 rounded-lg px-3 py-2 outline-none text-stone-600 text-sm resize-none" placeholder="寫點備註...">${event.note || ''}</textarea>
+                        </div>
+                        <div class="flex gap-3 pt-4 border-t border-stone-100">
+                            <button onclick="deleteCurrentEvent()" class="p-3 text-red-400 hover:bg-red-50 rounded-lg transition-colors">
+                                <i data-lucide="trash-2" class="w-5 h-5"></i>
+                            </button>
+                            <button onclick="toggleEditMode(false)" class="flex-1 py-3 text-stone-500 font-medium hover:bg-stone-100 rounded-lg transition-colors">取消</button>
+                            <button onclick="saveEvent()" class="flex-1 py-3 bg-red-700 hover:bg-red-800 text-white font-medium rounded-lg shadow-md transition-all flex items-center justify-center">
+                                <i data-lucide="save" class="w-4.5 h-4.5 mr-2"></i> 保存
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = `
+                <div class="bg-[#fcfcfc] rounded-lg w-full max-w-sm overflow-hidden shadow-2xl transform transition-all border border-stone-100 relative flex flex-col max-h-[90vh]" onclick="event.stopPropagation()">
+                    <!-- Header Image -->
+                    <div class="h-24 w-full flex items-center justify-center relative overflow-hidden flex-shrink-0 ${getEventColorClass(event.type, true)}">
+                        <div class="absolute inset-0 opacity-20" style="background-image: radial-gradient(circle, #fff 2px, transparent 2.5px); background-size: 12px 12px;"></div>
+                        <div class="relative z-10 text-white/90 drop-shadow-md">
+                            <i data-lucide="${getIconName(event.iconType)}" class="w-10 h-10"></i>
+                        </div>
+                    </div>
+                    <button onclick="closeModal()" class="absolute top-3 right-3 p-2 bg-white/80 rounded-full hover:bg-white transition-colors text-stone-500 shadow-sm z-20">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                    <div class="p-6 overflow-y-auto no-scrollbar">
+                        ${contentHtml}
+                    </div>
+                </div>
+            `;
+            
+            lucide.createIcons();
+        }
+
+        // --- 交互邏輯 ---
+
+        function changeDay(day) {
+            state.activeDay = day;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            renderApp();
+        }
+
+        function addNewEvent() {
+            const newEvent = {
+                time: "00:00", endTime: "00:00", title: "", location: "",
+                type: "misc", iconType: "misc", note: "", mapLink: ""
+            };
+            state.schedule[state.activeDay].events.push(newEvent);
+            const newIndex = state.schedule[state.activeDay].events.length - 1;
+            renderApp();
+            openModal(newIndex);
+        }
+
+        function saveEvent() {
+            const updatedEvent = {
+                ...state.schedule[state.activeDay].events[state.selectedEventIndex],
+                title: document.getElementById('input-title').value,
+                time: document.getElementById('input-time').value,
+                endTime: document.getElementById('input-endTime').value,
+                location: document.getElementById('input-location').value,
+                mapLink: document.getElementById('input-mapLink').value,
+                type: document.getElementById('input-type').value,
+                note: document.getElementById('input-note').value,
+                iconType: getIconTypeFromType(document.getElementById('input-type').value)
+            };
+            
+            state.schedule[state.activeDay].events[state.selectedEventIndex] = updatedEvent;
+            state.schedule[state.activeDay].events.sort((a, b) => a.time.localeCompare(b.time));
+            renderApp();
+            closeModal();
+        }
+
+        function deleteCurrentEvent() {
+            if(confirm("確定要刪除這個行程嗎？")) {
+                state.schedule[state.activeDay].events.splice(state.selectedEventIndex, 1);
+                renderApp();
+                closeModal();
+            }
+        }
+
+        function getIconTypeFromType(type) {
+            const map = {
+                sightseeing: 'camera', food: 'utensils', shopping: 'shopping-bag',
+                transport: 'train', hotel: 'bed-double', flight: 'plane', misc: 'misc'
+            };
+            return map[type] || 'misc';
+        }
+
+        async function fetchWeather(lat, lon) {
+            state.weatherTemp = null;
+            try {
+                const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+                const data = await res.json();
+                if (data.current_weather) {
+                    state.weatherTemp = data.current_weather.temperature;
+                    const widget = document.getElementById('weather-widget');
+                    if(widget) widget.querySelector('span').innerText = `${state.weatherTemp}°C`;
+                }
+            } catch (e) {
+                console.error("Weather error", e);
+            }
+        }
+
+        renderApp();
+
+        document.getElementById('modal-container').addEventListener('click', (e) => {
+            if(e.target.id === 'modal-container') closeModal();
+        });
+
+    </script>
+</body>
+</html>
